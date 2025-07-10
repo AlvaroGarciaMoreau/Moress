@@ -118,7 +118,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
                             width: 80,
                             height: 80,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF667eea).withOpacity(0.1),
+                              color: const Color(0xFF667eea).withAlpha((0.1 * 255).round()),
                               borderRadius: BorderRadius.circular(40),
                             ),
                             child: const Icon(
@@ -255,9 +255,9 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.blue[50],
+                        color: (Colors.blue[50] ?? Colors.blue),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue[200]!),
+                        border: Border.all(color: (Colors.blue[200] ?? Colors.blue)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

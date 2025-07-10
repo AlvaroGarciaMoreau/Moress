@@ -5,11 +5,11 @@ Moress es una aplicación móvil desarrollada en Flutter para gestionar de forma
 ## Características
 
 - 🔐 **Autenticación segura**: Contraseña maestra para acceder a la aplicación
-- 🔍 **Búsqueda rápida**: Busca servicios por nombre
+- 🔍 **Búsqueda rápida**: Busca servicios por nombre de servicio y nombre de usuario
 - 🔒 **Encriptación**: Todas las contraseñas se almacenan encriptadas
 - 📱 **Interfaz intuitiva**: Diseño moderno y fácil de usar
 - 📋 **Copiar al portapapeles**: Copia contraseñas con un toque
-- 🗑️ **Gestión completa**: Añadir, eliminar y gestionar servicios
+- 🗑️ **Gestión completa**: Añadir, eliminar, editar y gestionar servicios
 - 🔄 **Generador de contraseñas**: Genera contraseñas seguras automáticamente
 
 ## Instalación
@@ -22,15 +22,16 @@ Moress es una aplicación móvil desarrollada en Flutter para gestionar de forma
 ## Uso
 
 ### Primera vez
-- La contraseña maestra por defecto es: `Moress123!`
-- Se recomienda cambiar esta contraseña en el código para mayor seguridad
+- La contraseña maestra es introducida en el primer login
+- Se puede cambiar la contraseña una vez realizado el login desde la screen del home
 
 ### Añadir un servicio
 1. Inicia sesión con la contraseña maestra
 2. Toca el botón "+" flotante
 3. Introduce el nombre del servicio
-4. Introduce la contraseña o usa el generador automático
-5. Toca "Guardar"
+4. Introduce usuario
+5. Introduce la contraseña o usa el generador automático
+6. Toca "Guardar"
 
 ### Ver contraseñas
 1. En la lista de servicios, toca cualquier tarjeta
@@ -38,7 +39,7 @@ Moress es una aplicación móvil desarrollada en Flutter para gestionar de forma
 3. Toca el icono de copiar para copiarla al portapapeles
 4. Toca de nuevo para ocultarla
 
-### Buscar servicios
+### Buscar servicios y usuarios
 - Usa el campo de búsqueda en la parte superior
 - Los resultados se filtran automáticamente
 
@@ -72,14 +73,10 @@ lib/
 - `sqflite`: Base de datos SQLite local
 - `crypto`: Encriptación de datos
 - `path`: Manejo de rutas de archivos
+- `shared_preferences`: para el guardado encriptada de la contraseña maestra
+- `local_auth`: para el uso de huella dactilar
 
 ## Personalización
-
-### Cambiar la contraseña maestra
-Edita el archivo `lib/services/database_service.dart` y cambia la línea:
-```dart
-static const String _appPassword = "Moress123!";
-```
 
 ### Cambiar el tema de colores
 Edita el archivo `lib/main.dart` y modifica los colores en el `ThemeData`.
@@ -88,13 +85,14 @@ Edita el archivo `lib/main.dart` y modifica los colores en el `ThemeData`.
 
 ⚠️ **Importante**: 
 - Esta aplicación es para uso personal
-- La contraseña maestra está hardcodeada en el código
-- Para uso en producción, considera implementar:
+Este proyecto a sido creado con Cursor, siendo utilizado IA para su desarrollo, si vas a hacer uso profesional del codigo, revisalo antes, puede contener errores.
+
+- se ha implementado:
   - Biometría (huella dactilar, Face ID)
-  - Almacenamiento seguro de la contraseña maestra
-  - Backup encriptado de datos
   - Auto-bloqueo por inactividad
 
 ## Licencia
 
 Este proyecto es de código abierto y está disponible bajo la licencia MIT.
+
+Creado por Alvaro Garcia Moreau.

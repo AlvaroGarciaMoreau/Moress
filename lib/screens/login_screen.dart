@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/database_service.dart';
-import 'home_screen.dart';
+import 'package:local_auth/local_auth.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +14,37 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  final LocalAuthentication _localAuth = LocalAuthentication();
+  bool _canCheckBiometrics = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometrics();
+  }
+
+  Future<void> _checkBiometrics() async {
+    final canCheck = await _localAuth.canCheckBiometrics;
+    setState(() {
+      _canCheckBiometrics = canCheck;
+    });
+  }
+
+  Future<void> _authenticateWithBiometrics() async {
+    try {
+      final didAuthenticate = await _localAuth.authenticate(
+        localizedReason: 'Autentícate con tu huella dactilar',
+        options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+      );
+      if (didAuthenticate && mounted) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error de biometría: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -87,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 120,
                         height: 120,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withAlpha((0.2 * 255).toInt()),
                           borderRadius: BorderRadius.circular(60),
                         ),
                         child: const Icon(
@@ -115,13 +146,35 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 48),
                       
+                      if (_canCheckBiometrics) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.fingerprint),
+                            label: const Text('Acceder con huella'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Color(0xFF667eea),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: _authenticateWithBiometrics,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('O accede con tu contraseña', style: TextStyle(color: Colors.white70)),
+                        const SizedBox(height: 16),
+                      ],
+                      
                       // Campo de contraseña
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withAlpha((0.1 * 255).toInt()),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white,
                           ),
                         ),
                         child: TextFormField(
@@ -130,7 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             hintText: 'Introduce la contraseña maestra',
-                            hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                            hintStyle: TextStyle(color: Colors.white),
                             prefixIcon: const Icon(
                               Icons.lock,
                               color: Colors.white,
@@ -198,33 +251,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       
-                      // Información de ayuda
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Column(
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              color: Colors.white70,
-                              size: 20,
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Contraseña por defecto: Moress123!',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                     ],
                   ),
                 ),
               ),

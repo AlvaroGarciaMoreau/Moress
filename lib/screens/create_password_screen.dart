@@ -28,6 +28,7 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
     setState(() { _isLoading = true; });
     await DatabaseService.saveMasterPassword(_passwordController.text);
     setState(() { _isLoading = false; });
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
     );
@@ -38,14 +39,13 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Fondo de imagen
+          // Fondo de imagen y degradado (igual que login)
           Positioned.fill(
             child: Image.asset(
               'assets/fondo.jpg',
               fit: BoxFit.cover,
             ),
           ),
-          // Overlay de degradado
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
@@ -68,11 +68,15 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(24.0),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Form(
                     key: _formKey,
@@ -83,13 +87,13 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                           width: 100,
                           height: 100,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: const Color(0xFF667eea).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(50),
                           ),
                           child: const Icon(
                             Icons.lock_outline,
                             size: 50,
-                            color: Colors.white,
+                            color: Color(0xFF667eea),
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -98,7 +102,7 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: Color(0xFF667eea),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -106,7 +110,7 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                           'Establece una contraseña segura para proteger tus servicios',
                           style: TextStyle(
                             fontSize: 16,
-                            color: Colors.white70,
+                            color: Colors.black87,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -114,17 +118,21 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: Colors.black87),
                           decoration: InputDecoration(
                             labelText: 'Nueva contraseña',
-                            labelStyle: const TextStyle(color: Colors.white),
+                            labelStyle: const TextStyle(color: Color(0xFF667eea)),
                             suffixIcon: IconButton(
-                              icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white),
+                              icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Color(0xFF667eea)),
                               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                             ),
-                            border: InputBorder.none,
-                            filled: true,
-                            fillColor: Colors.white.withOpacity(0.05),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: const BorderSide(color: Color(0xFF667eea), width: 2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           ),
                           validator: (value) {
@@ -141,14 +149,18 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                         TextFormField(
                           controller: _confirmController,
                           obscureText: _obscurePassword,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
+                          style: const TextStyle(color: Colors.black87),
+                          decoration: InputDecoration(
                             labelText: 'Confirmar contraseña',
-                            labelStyle: TextStyle(color: Colors.white),
-                            border: InputBorder.none,
-                            filled: true,
-                            fillColor: Color(0x22000000),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            labelStyle: const TextStyle(color: Color(0xFF667eea)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: const BorderSide(color: Color(0xFF667eea), width: 2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           ),
                           validator: (value) {
                             if (value != _passwordController.text) {
@@ -164,8 +176,8 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _savePassword,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF667eea),
+                              backgroundColor: const Color(0xFF667eea),
+                              foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),

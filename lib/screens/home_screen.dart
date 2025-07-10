@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/service.dart';
 import '../services/database_service.dart';
 import '../widgets/service_card.dart';
 import 'add_service_screen.dart';
 import 'login_screen.dart';
+import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,17 +20,45 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   final _searchController = TextEditingController();
   int _serviceCount = 0;
+  Timer? _inactivityTimer;
+  Timer? _warningTimer;
 
   @override
   void initState() {
     super.initState();
     _loadServicesAndCount();
+    _startInactivityTimer();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _inactivityTimer?.cancel();
+    _warningTimer?.cancel();
     super.dispose();
+  }
+
+  void _startInactivityTimer() {
+    _inactivityTimer?.cancel();
+    _warningTimer?.cancel();
+    _warningTimer = Timer(const Duration(seconds: 25), () {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('La app se cerrará por inactividad en 5 segundos...'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    });
+    _inactivityTimer = Timer(const Duration(seconds: 30), () {
+      SystemNavigator.pop();
+    });
+  }
+
+  void _onUserInteraction([_]) {
+    _startInactivityTimer();
   }
 
   Future<void> _loadServicesAndCount() async {
@@ -54,12 +84,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _loadServiceCount() async {
-    final services = await DatabaseService.getServices();
-    setState(() {
-      _serviceCount = services.length;
-    });
-  }
 
   void _searchServices(String query) {
     setState(() {
@@ -166,8 +190,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    return Listener(
+      onPointerDown: _onUserInteraction,
+      onPointerMove: _onUserInteraction,
+      onPointerUp: _onUserInteraction,
+      child: Scaffold(
+        appBar: AppBar(
           title: const Text(
             'Moress',
             style: TextStyle(fontWeight: FontWeight.bold),
@@ -192,90 +220,91 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-      body: Column(
-        children: [
-          // Buscador
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _searchServices,
-              decoration: InputDecoration(
-                hintText: 'Buscar servicios...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+        body: Column(
+          children: [
+            // Buscador
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _searchServices,
+                decoration: InputDecoration(
+                  hintText: 'Buscar servicios...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[100],
                 ),
-                filled: true,
-                fillColor: Colors.grey[100],
               ),
             ),
-          ),
-          
-          // Lista de servicios
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(),
-                  )
-                : _filteredServices.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _searchController.text.isEmpty
-                                  ? Icons.lock_outline
-                                  : Icons.search_off,
-                              size: 64,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _searchController.text.isEmpty
-                                  ? 'No hay servicios guardados'
-                                  : 'No se encontraron servicios',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey[600],
+            
+            // Lista de servicios
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : _filteredServices.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _searchController.text.isEmpty
+                                    ? Icons.lock_outline
+                                    : Icons.search_off,
+                                size: 64,
+                                color: Colors.grey[400],
                               ),
-                            ),
-                            if (_searchController.text.isEmpty) ...[
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 16),
                               Text(
-                                'Toca el botón + para añadir tu primer servicio',
+                                _searchController.text.isEmpty
+                                    ? 'No hay servicios guardados'
+                                    : 'No se encontraron servicios',
                                 style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[500],
+                                  fontSize: 18,
+                                  color: Colors.grey[600],
                                 ),
                               ),
+                              if (_searchController.text.isEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Toca el botón + para añadir tu primer servicio',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _loadServicesAndCount,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: _filteredServices.length,
+                            itemBuilder: (context, index) {
+                              final service = _filteredServices[index];
+                              return ServiceCard(
+                                service: service,
+                                onDelete: () => _deleteService(service),
+                                onEdited: _loadServicesAndCount,
+                              );
+                            },
+                          ),
                         ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _loadServicesAndCount,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _filteredServices.length,
-                          itemBuilder: (context, index) {
-                            final service = _filteredServices[index];
-                            return ServiceCard(
-                              service: service,
-                              onDelete: () => _deleteService(service),
-                              onEdited: _loadServicesAndCount,
-                            );
-                          },
-                        ),
-                      ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addService,
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _addService,
+          backgroundColor: const Color(0xFF667eea),
+          foregroundColor: Colors.white,
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
@@ -312,6 +341,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
     final isValid = await DatabaseService.verifyMasterPassword(_currentController.text);
     if (!isValid) {
       setState(() { _isLoading = false; });
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Contraseña actual incorrecta'), backgroundColor: Colors.red),
       );
