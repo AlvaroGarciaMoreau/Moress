@@ -17,11 +17,12 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Service> _filteredServices = [];
   bool _isLoading = true;
   final _searchController = TextEditingController();
+  int _serviceCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadServices();
+    _loadServicesAndCount();
   }
 
   @override
@@ -30,22 +31,18 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _loadServices() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _loadServicesAndCount() async {
+    setState(() { _isLoading = true; });
     try {
       final services = await DatabaseService.getServices();
       setState(() {
         _services = services;
         _filteredServices = services;
+        _serviceCount = services.length;
         _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() { _isLoading = false; });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -57,6 +54,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _loadServiceCount() async {
+    final services = await DatabaseService.getServices();
+    setState(() {
+      _serviceCount = services.length;
+    });
+  }
+
   void _searchServices(String query) {
     setState(() {
       if (query.isEmpty) {
@@ -64,7 +68,8 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         _filteredServices = _services
             .where((service) =>
-                service.name.toLowerCase().contains(query.toLowerCase()))
+                service.name.toLowerCase().contains(query.toLowerCase()) ||
+                service.user.toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
     });
@@ -74,9 +79,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const AddServiceScreen()),
     );
-
     if (result == true) {
-      _loadServices();
+      _loadServicesAndCount();
     }
   }
 
@@ -103,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (confirmed == true && service.id != null) {
       try {
         await DatabaseService.deleteService(service.id!);
-        _loadServices();
+        _loadServicesAndCount();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -132,24 +136,62 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showChangePasswordDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => _ChangePasswordDialog(onChanged: () {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Contraseña cambiada correctamente'), backgroundColor: Colors.green),
+        );
+      }),
+    );
+  }
+
+  void _showSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Configuración'),
+        content: Text('Contraseñas guardadas: $_serviceCount'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Moress',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-            tooltip: 'Cerrar sesión',
+          title: const Text(
+            'Moress',
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
-        ],
-      ),
+          backgroundColor: const Color(0xFF667eea),
+          foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.vpn_key),
+              tooltip: 'Cambiar contraseña maestra',
+              onPressed: _showChangePasswordDialog,
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings),
+              tooltip: 'Configuración',
+              onPressed: _showSettingsDialog,
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: _logout,
+              tooltip: 'Cerrar sesión',
+            ),
+          ],
+        ),
       body: Column(
         children: [
           // Buscador
@@ -212,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       )
                     : RefreshIndicator(
-                        onRefresh: _loadServices,
+                        onRefresh: _loadServicesAndCount,
                         child: ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: _filteredServices.length,
@@ -221,6 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             return ServiceCard(
                               service: service,
                               onDelete: () => _deleteService(service),
+                              onEdited: _loadServicesAndCount,
                             );
                           },
                         ),
@@ -234,6 +277,127 @@ class _HomeScreenState extends State<HomeScreen> {
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
+    );
+  }
+} 
+
+class _ChangePasswordDialog extends StatefulWidget {
+  final VoidCallback onChanged;
+  const _ChangePasswordDialog({required this.onChanged});
+
+  @override
+  State<_ChangePasswordDialog> createState() => _ChangePasswordDialogState();
+}
+
+class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _currentController = TextEditingController();
+  final _newController = TextEditingController();
+  final _confirmController = TextEditingController();
+  bool _isLoading = false;
+  bool _obscureCurrent = true;
+  bool _obscureNew = true;
+
+  @override
+  void dispose() {
+    _currentController.dispose();
+    _newController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _changePassword() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() { _isLoading = true; });
+    final isValid = await DatabaseService.verifyMasterPassword(_currentController.text);
+    if (!isValid) {
+      setState(() { _isLoading = false; });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Contraseña actual incorrecta'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    await DatabaseService.saveMasterPassword(_newController.text);
+    setState(() { _isLoading = false; });
+    widget.onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Cambiar Contraseña Maestra'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _currentController,
+              obscureText: _obscureCurrent,
+              decoration: InputDecoration(
+                labelText: 'Contraseña actual',
+                suffixIcon: IconButton(
+                  icon: Icon(_obscureCurrent ? Icons.visibility : Icons.visibility_off),
+                  onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
+                ),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Introduce la contraseña actual';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _newController,
+              obscureText: _obscureNew,
+              decoration: InputDecoration(
+                labelText: 'Nueva contraseña',
+                suffixIcon: IconButton(
+                  icon: Icon(_obscureNew ? Icons.visibility : Icons.visibility_off),
+                  onPressed: () => setState(() => _obscureNew = !_obscureNew),
+                ),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Introduce la nueva contraseña';
+                }
+                if (value.length < 6) {
+                  return 'Debe tener al menos 6 caracteres';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _confirmController,
+              obscureText: _obscureNew,
+              decoration: const InputDecoration(
+                labelText: 'Repite la nueva contraseña',
+              ),
+              validator: (value) {
+                if (value != _newController.text) {
+                  return 'Las contraseñas no coinciden';
+                }
+                return null;
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _changePassword,
+          child: _isLoading
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Cambiar'),
+        ),
+      ],
     );
   }
 } 

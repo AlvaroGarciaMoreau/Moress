@@ -22,35 +22,27 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Simular un pequeño delay para mejor UX
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    if (DatabaseService.verifyMasterPassword(_passwordController.text)) {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      }
+    setState(() { _isLoading = true; });
+    final isValid = await DatabaseService.verifyMasterPassword(_passwordController.text);
+    setState(() { _isLoading = false; });
+    if (isValid) {
+      // Navegar a la pantalla principal
+      Navigator.of(context).pushReplacementNamed('/home');
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Contraseña incorrecta'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: const Text('Contraseña incorrecta'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   @override

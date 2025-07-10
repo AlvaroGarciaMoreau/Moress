@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/service.dart';
 import '../services/database_service.dart';
+import 'dart:math';
 
 class AddServiceScreen extends StatefulWidget {
   const AddServiceScreen({super.key});
@@ -12,6 +13,7 @@ class AddServiceScreen extends StatefulWidget {
 class _AddServiceScreenState extends State<AddServiceScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _userController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -19,6 +21,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _userController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -33,6 +36,7 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
     try {
       final service = Service(
         name: _nameController.text.trim(),
+        user: _userController.text.trim(),
         password: _passwordController.text,
       );
 
@@ -67,13 +71,8 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
 
   void _generatePassword() {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#\$%^&*';
-    String password = '';
-    
-    // Generar contraseña de 12 caracteres
-    for (int i = 0; i < 12; i++) {
-      password += chars[DateTime.now().millisecondsSinceEpoch % chars.length];
-    }
-    
+    final rand = Random.secure();
+    String password = List.generate(12, (index) => chars[rand.nextInt(chars.length)]).join();
     setState(() {
       _passwordController.text = password;
     });
@@ -168,6 +167,24 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
                       textCapitalization: TextCapitalization.words,
                     ),
                     
+                    const SizedBox(height: 16),
+                    
+                    // Campo usuario
+                    TextFormField(
+                      controller: _userController,
+                      decoration: const InputDecoration(
+                        labelText: 'Usuario',
+                        hintText: 'Ej: correo@ejemplo.com o nombre de usuario',
+                        prefixIcon: Icon(Icons.person),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Por favor introduce el usuario';
+                        }
+                        return null;
+                      },
+                    ),
                     const SizedBox(height: 16),
                     
                     // Campo contraseña

@@ -1,12 +1,14 @@
 class Service {
   final int? id;
   final String name;
+  final String user;
   final String password;
   final String createdAt; // Ahora es String
 
   Service({
     this.id,
     required this.name,
+    required this.user,
     required this.password,
     String? createdAt,
   }) : createdAt = createdAt ?? _nowEs();
@@ -25,6 +27,7 @@ class Service {
     return {
       'id': id,
       'name': name,
+      'user': user,
       'password': password,
       'createdAt': createdAt,
     };
@@ -34,6 +37,7 @@ class Service {
     return Service(
       id: map['id'],
       name: map['name'],
+      user: map['user'],
       password: map['password'],
       createdAt: map['createdAt'],
     );

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/service.dart';
+import '../services/database_service.dart';
 
 class ServiceCard extends StatefulWidget {
   final Service service;
   final VoidCallback onDelete;
+  final VoidCallback? onEdited;
 
   const ServiceCard({
     super.key,
     required this.service,
     required this.onDelete,
+    this.onEdited,
   });
 
   @override
@@ -50,6 +53,41 @@ class _ServiceCardState extends State<ServiceCard> {
     });
   }
 
+  void _showEditDialog() async {
+    final result = await showDialog<Service>(
+      context: context,
+      builder: (context) => _EditServiceDialog(service: widget.service),
+    );
+    if (result != null) {
+      if (widget.onEdited != null) widget.onEdited!();
+    }
+  }
+
+  Color _getCardColor() {
+    // Intenta parsear la fecha
+    try {
+      final partes = widget.service.createdAt.split(' de ');
+      if (partes.length >= 3) {
+        final dia = int.parse(partes[0]);
+        final mesStr = partes[1].trim();
+        final anio = int.parse(partes[2].split(',')[0].trim());
+        final meses = [
+          'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+          'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+        ];
+        final mes = meses.indexOf(mesStr) + 1;
+        final fecha = DateTime(anio, mes, dia);
+        final ahora = DateTime.now();
+        final diferencia = ahora.difference(fecha);
+        if (diferencia.inDays > 180) {
+          // Más de 6 meses
+          return const Color(0xFFFFE5E5); // Rojo pastel suave
+        }
+      }
+    } catch (_) {}
+    return const Color(0xFFE5FFF1); // Verde pastel suave
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -58,6 +96,7 @@ class _ServiceCardState extends State<ServiceCard> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
+      color: _getCardColor(),
       child: InkWell(
         onTap: _togglePassword,
         borderRadius: BorderRadius.circular(12),
@@ -98,6 +137,13 @@ class _ServiceCardState extends State<ServiceCard> {
                           ),
                         ),
                         Text(
+                          widget.service.user,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Text(
                           'Creado: ${widget.service.createdAt}',
                           style: TextStyle(
                             fontSize: 12,
@@ -112,6 +158,12 @@ class _ServiceCardState extends State<ServiceCard> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Botón editar
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                        onPressed: _showEditDialog,
+                        tooltip: 'Editar servicio',
+                      ),
                       // Botón copiar
                       if (_showPassword)
                         IconButton(
@@ -205,6 +257,114 @@ class _ServiceCardState extends State<ServiceCard> {
           ),
         ),
       ),
+    );
+  }
+} 
+
+class _EditServiceDialog extends StatefulWidget {
+  final Service service;
+  const _EditServiceDialog({required this.service});
+
+  @override
+  State<_EditServiceDialog> createState() => _EditServiceDialogState();
+}
+
+class _EditServiceDialogState extends State<_EditServiceDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _userController;
+  late TextEditingController _passwordController;
+  bool _obscurePassword = true;
+  bool _isLoading = false;
+  String? _originalPassword;
+
+  @override
+  void initState() {
+    super.initState();
+    _userController = TextEditingController(text: widget.service.user);
+    _passwordController = TextEditingController(text: widget.service.password);
+    _originalPassword = widget.service.password;
+  }
+
+  @override
+  void dispose() {
+    _userController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() { _isLoading = true; });
+    final newPassword = _passwordController.text;
+    final updateDate = newPassword != _originalPassword;
+    final updatedService = Service(
+      id: widget.service.id,
+      name: widget.service.name,
+      user: _userController.text.trim(),
+      password: newPassword,
+      createdAt: updateDate ? null : widget.service.createdAt,
+    );
+    await DatabaseService.updateService(updatedService);
+    setState(() { _isLoading = false; });
+    if (mounted) Navigator.of(context).pop(updatedService);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Editar Servicio'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _userController,
+              decoration: const InputDecoration(
+                labelText: 'Usuario',
+                prefixIcon: Icon(Icons.person),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Por favor introduce el usuario';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _passwordController,
+              obscureText: _obscurePassword,
+              decoration: InputDecoration(
+                labelText: 'Contraseña',
+                prefixIcon: const Icon(Icons.lock),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Por favor introduce la contraseña';
+                }
+                return null;
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _save,
+          child: _isLoading
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Guardar'),
+        ),
+      ],
     );
   }
 } 

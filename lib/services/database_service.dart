@@ -2,10 +2,11 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/service.dart';
 import 'encryption_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DatabaseService {
   static Database? _database;
-  static const String _appPassword = "Moress123!"; // Contraseña maestra de la app
+  // static const String _appPassword = "Moress123!"; // Contraseña maestra de la app
 
   static Future<Database> get database async {
     if (_database != null) return _database!;
@@ -27,15 +28,33 @@ class DatabaseService {
       CREATE TABLE services(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
+        user TEXT NOT NULL,
         password TEXT NOT NULL,
         createdAt TEXT NOT NULL
       )
     ''');
   }
 
+  // Guardar contraseña maestra encriptada
+  static Future<void> saveMasterPassword(String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    final encrypted = EncryptionService.encrypt(password);
+    await prefs.setString('master_password', encrypted);
+  }
+
+  // Obtener contraseña maestra encriptada (desencriptada)
+  static Future<String?> getMasterPassword() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encrypted = prefs.getString('master_password');
+    if (encrypted == null) return null;
+    return EncryptionService.decrypt(encrypted);
+  }
+
   // Verificar contraseña maestra
-  static bool verifyMasterPassword(String password) {
-    return password == _appPassword;
+  static Future<bool> verifyMasterPassword(String password) async {
+    final stored = await getMasterPassword();
+    if (stored == null) return false;
+    return password == stored;
   }
 
   // Obtener todos los servicios
@@ -48,6 +67,7 @@ class DatabaseService {
       return Service(
         id: service.id,
         name: service.name,
+        user: service.user,
         password: EncryptionService.decrypt(service.password),
         createdAt: service.createdAt,
       );
@@ -69,6 +89,7 @@ class DatabaseService {
       return Service(
         id: service.id,
         name: service.name,
+        user: service.user,
         password: EncryptionService.decrypt(service.password),
         createdAt: service.createdAt,
       );
@@ -80,6 +101,7 @@ class DatabaseService {
     final db = await database;
     final encryptedService = Service(
       name: service.name,
+      user: service.user,
       password: EncryptionService.encrypt(service.password),
       createdAt: service.createdAt,
     );
@@ -92,6 +114,7 @@ class DatabaseService {
     final encryptedService = Service(
       id: service.id,
       name: service.name,
+      user: service.user,
       password: EncryptionService.encrypt(service.password),
       createdAt: service.createdAt,
     );
