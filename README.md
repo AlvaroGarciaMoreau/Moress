@@ -1,4 +1,4 @@
-# More- 🔐 **Autenticación segura**: Contraseña maestra para acceder a la aplicación
+# Moress- 🔐 **Autenticación segura**: Contraseña maestra para acceder a la aplicación
 - 👆 **Autenticación biométrica**: Soporte para huella dactilar y Face ID
 - 🔍 **Búsqueda rápida**: Busca servicios por nombre de servicio y nombre de usuario
 - 🔒 **Encriptación avanzada**: Todas las contraseñas se almacenan encriptadas con algoritmos seguros
