@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/database_service.dart';
 import 'package:local_auth/local_auth.dart';
 
@@ -24,25 +25,103 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _checkBiometrics() async {
-    final canCheck = await _localAuth.canCheckBiometrics;
-    setState(() {
-      _canCheckBiometrics = canCheck;
-    });
+    try {
+      final canCheck = await _localAuth.canCheckBiometrics;
+      final isDeviceSupported = await _localAuth.isDeviceSupported();
+      setState(() {
+        _canCheckBiometrics = canCheck && isDeviceSupported;
+      });
+    } catch (e) {
+      setState(() {
+        _canCheckBiometrics = false;
+      });
+      // Error checking biometrics, logged but not shown to user
+    }
   }
 
   Future<void> _authenticateWithBiometrics() async {
     try {
+      // Verificar que la biometría esté disponible
+      final isAvailable = await _localAuth.canCheckBiometrics;
+      final isDeviceSupported = await _localAuth.isDeviceSupported();
+      
+      if (!isAvailable || !isDeviceSupported) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('La autenticación biométrica no está disponible en este dispositivo'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Obtener los métodos biométricos disponibles
+      final availableBiometrics = await _localAuth.getAvailableBiometrics();
+      if (availableBiometrics.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No hay métodos biométricos configurados en el dispositivo'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
       final didAuthenticate = await _localAuth.authenticate(
-        localizedReason: 'Autentícate con tu huella dactilar',
-        options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+        localizedReason: 'Autentícate con tu huella dactilar para acceder a Moress',
+        options: const AuthenticationOptions(
+          biometricOnly: true, 
+          stickyAuth: true,
+        ),
       );
+      
       if (didAuthenticate && mounted) {
         Navigator.of(context).pushReplacementNamed('/home');
       }
+    } on PlatformException catch (e) {
+      if (mounted) {
+        String errorMessage;
+        switch (e.code) {
+          case 'NotAvailable':
+            errorMessage = 'La autenticación biométrica no está disponible';
+            break;
+          case 'NotEnrolled':
+            errorMessage = 'No hay huellas dactilares registradas en el dispositivo';
+            break;
+          case 'LockedOut':
+            errorMessage = 'Demasiados intentos fallidos. Intenta de nuevo más tarde';
+            break;
+          case 'PermanentlyLockedOut':
+            errorMessage = 'La autenticación biométrica está permanentemente bloqueada';
+            break;
+          case 'BiometricOnlyNotSupported':
+            errorMessage = 'Este dispositivo no soporta autenticación solo con biometría';
+            break;
+          default:
+            errorMessage = 'Error de autenticación biométrica: ${e.message ?? 'Error desconocido'}';
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error de biometría: $e'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error inesperado: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

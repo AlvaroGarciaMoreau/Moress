@@ -14,7 +14,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Service> _services = [];
   List<Service> _filteredServices = [];
   bool _isLoading = true;
@@ -22,25 +22,78 @@ class _HomeScreenState extends State<HomeScreen> {
   int _serviceCount = 0;
   Timer? _inactivityTimer;
   Timer? _warningTimer;
+  bool _isAppInBackground = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadServicesAndCount();
     _startInactivityTimer();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     _inactivityTimer?.cancel();
     _warningTimer?.cancel();
     super.dispose();
   }
 
-  void _startInactivityTimer() {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    switch (state) {
+      case AppLifecycleState.paused:
+        // App minimizada o perdió el foco - cerrar sesión por seguridad
+        _isAppInBackground = true;
+        _cancelTimers();
+        _logout();
+        break;
+      case AppLifecycleState.inactive:
+        // App en transición (ej: llamada entrante, selector de apps) - cerrar sesión por seguridad
+        _isAppInBackground = true;
+        _cancelTimers();
+        _logout();
+        break;
+      case AppLifecycleState.detached:
+        // App siendo cerrada
+        _isAppInBackground = true;
+        _cancelTimers();
+        _logout();
+        break;
+      case AppLifecycleState.resumed:
+        // App regresó al primer plano
+        if (_isAppInBackground && mounted) {
+          // Si la app estaba en background, forzar logout al volver
+          _logout();
+        } else if (mounted) {
+          _startInactivityTimer();
+        }
+        _isAppInBackground = false;
+        break;
+      case AppLifecycleState.hidden:
+        // App oculta (solo en algunas plataformas)
+        _isAppInBackground = true;
+        _cancelTimers();
+        _logout();
+        break;
+    }
+  }
+
+  void _cancelTimers() {
     _inactivityTimer?.cancel();
     _warningTimer?.cancel();
+  }
+
+  void _startInactivityTimer() {
+    // Cancelar timers existentes
+    _inactivityTimer?.cancel();
+    _warningTimer?.cancel();
+    
+    // Timer de advertencia (25 segundos)
     _warningTimer = Timer(const Duration(seconds: 25), () {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -52,12 +105,17 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     });
+    
+    // Timer de cierre (30 segundos)
     _inactivityTimer = Timer(const Duration(seconds: 30), () {
-      SystemNavigator.pop();
+      if (mounted) {
+        SystemNavigator.pop();
+      }
     });
   }
 
   void _onUserInteraction([_]) {
+    // Reiniciar el timer cada vez que hay interacción
     _startInactivityTimer();
   }
 
@@ -154,10 +212,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _logout() {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-      (route) => false,
-    );
+    // Cancelar timers antes de salir
+    _cancelTimers();
+    
+    // Navegar al login y remover todas las rutas anteriores
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 
   void _showChangePasswordDialog() {
@@ -203,110 +267,135 @@ class _HomeScreenState extends State<HomeScreen> {
           backgroundColor: const Color(0xFF667eea),
           foregroundColor: Colors.white,
           actions: [
-            IconButton(
-              icon: const Icon(Icons.vpn_key),
-              tooltip: 'Cambiar contraseña maestra',
-              onPressed: _showChangePasswordDialog,
-            ),
-            IconButton(
-              icon: const Icon(Icons.settings),
-              tooltip: 'Configuración',
-              onPressed: _showSettingsDialog,
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: _logout,
-              tooltip: 'Cerrar sesión',
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
-            // Buscador
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: TextField(
-                controller: _searchController,
-                onChanged: _searchServices,
-                decoration: InputDecoration(
-                  hintText: 'Buscar servicios...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+              IconButton(
+                icon: const Icon(Icons.vpn_key),
+                tooltip: 'Cambiar contraseña maestra',
+                onPressed: () {
+                  _onUserInteraction();
+                  _showChangePasswordDialog();
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings),
+                tooltip: 'Configuración',
+                onPressed: () {
+                  _onUserInteraction();
+                  _showSettingsDialog();
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout),
+                onPressed: () {
+                  _onUserInteraction();
+                  _logout();
+                },
+                tooltip: 'Cerrar sesión',
+              ),
+            ],
+          ),
+          body: Column(
+            children: [
+              // Buscador
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    _onUserInteraction();
+                    _searchServices(value);
+                  },
+                  onTap: _onUserInteraction,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar servicios...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
                   ),
-                  filled: true,
-                  fillColor: Colors.grey[100],
                 ),
               ),
-            ),
-            
-            // Lista de servicios
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(),
-                    )
-                  : _filteredServices.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _searchController.text.isEmpty
-                                    ? Icons.lock_outline
-                                    : Icons.search_off,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                _searchController.text.isEmpty
-                                    ? 'No hay servicios guardados'
-                                    : 'No se encontraron servicios',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
+              
+              // Lista de servicios
+              Expanded(
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(),
+                      )
+                    : _filteredServices.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  _searchController.text.isEmpty
+                                      ? Icons.lock_outline
+                                      : Icons.search_off,
+                                  size: 64,
+                                  color: Colors.grey[400],
                                 ),
-                              ),
-                              if (_searchController.text.isEmpty) ...[
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 16),
                                 Text(
-                                  'Toca el botón + para añadir tu primer servicio',
+                                  _searchController.text.isEmpty
+                                      ? 'No hay servicios guardados'
+                                      : 'No se encontraron servicios',
                                   style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[500],
+                                    fontSize: 18,
+                                    color: Colors.grey[600],
                                   ),
                                 ),
+                                if (_searchController.text.isEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Toca el botón + para añadir tu primer servicio',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
                               ],
-                            ],
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _loadServicesAndCount,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: _filteredServices.length,
-                            itemBuilder: (context, index) {
-                              final service = _filteredServices[index];
-                              return ServiceCard(
-                                service: service,
-                                onDelete: () => _deleteService(service),
-                                onEdited: _loadServicesAndCount,
-                              );
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: () {
+                              _onUserInteraction();
+                              return _loadServicesAndCount();
                             },
+                            child: ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: _filteredServices.length,
+                              itemBuilder: (context, index) {
+                                final service = _filteredServices[index];
+                                return ServiceCard(
+                                  service: service,
+                                  onDelete: () {
+                                    _onUserInteraction();
+                                    _deleteService(service);
+                                  },
+                                  onEdited: () {
+                                    _onUserInteraction();
+                                    _loadServicesAndCount();
+                                  },
+                                );
+                              },
+                            ),
                           ),
-                        ),
-            ),
-          ],
+              ),
+            ],
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              _onUserInteraction();
+              _addService();
+            },
+            backgroundColor: const Color(0xFF667eea),
+            foregroundColor: Colors.white,
+            child: const Icon(Icons.add),
+          ),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _addService,
-          backgroundColor: const Color(0xFF667eea),
-          foregroundColor: Colors.white,
-          child: const Icon(Icons.add),
-        ),
-      ),
-    );
+      );
   }
 } 
 
