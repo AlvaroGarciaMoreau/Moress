@@ -125,12 +125,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _loadServicesAndCount() async {
     setState(() { _isLoading = true; });
     try {
-      final uuid = await UserService.getOrCreateUuid();
-      final services = await RemoteService.listarServicios(uuid);
+  final email = await UserService.getEmail();
+  if (email == null) throw Exception('No se encontró el email del usuario.');
+  final services = await RemoteService.listarServicios(email);
       setState(() {
         _services = services;
         _filteredServices = services;
-      
         _isLoading = false;
       });
     } catch (e) {
@@ -175,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminar servicio'),
-        content: Text('¿Estás seguro de que quieres eliminar "${service.name}"?'),
+        content: Text('1Est1s seguro de que quieres eliminar "${service.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -192,8 +192,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (confirmed == true && service.id != null) {
       try {
-        final uuid = await UserService.getOrCreateUuid();
-        final success = await RemoteService.borrarServicio(service.id!, uuid);
+  final email = await UserService.getEmail();
+  if (email == null) throw Exception('No se encontró el email del usuario.');
+  final success = await RemoteService.borrarServicio(service.id!, email);
         if (success) {
           _loadServicesAndCount();
           if (mounted) {

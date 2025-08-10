@@ -314,8 +314,9 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
       updatedAt: DateTime.now().toIso8601String(),
     );
     try {
-      final uuid = await UserService.getOrCreateUuid();
-      final success = await RemoteService.guardarServicio(updatedService, uuid);
+  final email = await UserService.getEmail();
+  if (email == null) throw Exception('No se encontró el email del usuario.');
+  final success = await RemoteService.guardarServicio(updatedService, email);
       setState(() { _isLoading = false; });
       if (mounted && success) {
         Navigator.of(context).pop(updatedService);

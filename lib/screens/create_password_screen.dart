@@ -11,6 +11,7 @@ class CreatePasswordScreen extends StatefulWidget {
 
 class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   bool _obscurePassword = true;
@@ -18,6 +19,7 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
 
   @override
   void dispose() {
+    _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
@@ -27,9 +29,7 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _isLoading = true; });
     final prefs = await SharedPreferences.getInstance();
-    // Guardamos la contraseña maestra en claro en SharedPreferences
-    // (se usa solo para derivar la clave de cifrado). Opcionalmente
-    // se puede añadir un hash para validación en el futuro.
+    await prefs.setString('user_email', _emailController.text.trim());
     await prefs.setString('master_password', _passwordController.text);
     setState(() { _isLoading = false; });
     if (!mounted) return;
@@ -119,6 +119,33 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 32),
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          style: const TextStyle(color: Colors.black87),
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            labelStyle: const TextStyle(color: Color(0xFF667eea)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: const BorderSide(color: Color(0xFF667eea), width: 2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor introduce un email';
+                            }
+                            if (!RegExp(r'^.+@.+\..+$').hasMatch(value)) {
+                              return 'Introduce un email válido';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,

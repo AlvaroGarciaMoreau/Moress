@@ -40,8 +40,9 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
         user: _userController.text.trim(),
         password: _passwordController.text,
       );
-      final uuid = await UserService.getOrCreateUuid();
-      final success = await RemoteService.guardarServicio(service, uuid);
+  final email = await UserService.getEmail();
+  if (email == null) throw Exception('No se encontró el email del usuario.');
+  final success = await RemoteService.guardarServicio(service, email);
       if (mounted) {
         if (success) {
           Navigator.of(context).pop(true);

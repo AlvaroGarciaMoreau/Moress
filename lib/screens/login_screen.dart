@@ -11,6 +11,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
@@ -127,6 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -134,8 +136,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() { _isLoading = true; });
     final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getString('master_password');
-    final isValid = stored != null && stored == _passwordController.text;
+    final storedEmail = prefs.getString('user_email');
+    final storedPassword = prefs.getString('master_password');
+    final isValid = storedEmail != null && storedPassword != null &&
+        storedEmail == _emailController.text.trim() &&
+        storedPassword == _passwordController.text;
     setState(() { _isLoading = false; });
     if (!mounted) return;
 
@@ -146,7 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Error'),
-          content: const Text('Contraseña incorrecta'),
+          content: const Text('Email o contraseña incorrectos'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -250,6 +255,44 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                       ],
                       
+                      // Campo de email
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha((0.1 * 255).toInt()),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white,
+                          ),
+                        ),
+                        child: TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Introduce tu email',
+                            hintStyle: TextStyle(color: Colors.white),
+                            prefixIcon: const Icon(
+                              Icons.email,
+                              color: Colors.white,
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor introduce tu email';
+                            }
+                            if (!RegExp(r'^.+@.+\..+$').hasMatch(value)) {
+                              return 'Introduce un email válido';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       // Campo de contraseña
                       Container(
                         decoration: BoxDecoration(
