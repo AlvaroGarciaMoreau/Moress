@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/service.dart';
+import 'encryption_service.dart';
 
 class RemoteService {
   static const String baseUrl = 'https://www.moreausoft.com/Moress/'; // Cambia por tu dominio real
@@ -9,28 +10,33 @@ class RemoteService {
     final response = await http.get(Uri.parse('${baseUrl}listar_servicios.php?uuid=$uuid'));
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
-      return data.map((e) => Service(
-        id: e['id'],
-        name: e['servicio'],
-        user: e['usuario'],
-        password: e['contrasena'],
-      )).toList();
+      final List<Service> services = [];
+      for (final e in data) {
+        final decrypted = await EncryptionService.decrypt(e['contrasena'] ?? '');
+        services.add(Service(
+          id: e['id'],
+          name: e['servicio'],
+          user: e['usuario'],
+          password: decrypted,
+        ));
+      }
+      return services;
     } else {
       throw Exception('Error al listar servicios');
     }
   }
 
   static Future<bool> guardarServicio(Service service, String uuid) async {
+    // Crear payload y encriptar contraseña antes de enviar
+    final encrypted = await EncryptionService.encrypt(service.password);
+    final payload = service.toMap()
+      ..['uuid'] = uuid
+      ..['contrasena'] = encrypted;
+
     final response = await http.post(
       Uri.parse('${baseUrl}guardar_servicio.php'),
       headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'id': service.id,
-        'uuid': uuid,
-        'servicio': service.name,
-        'usuario': service.user,
-        'contrasena': service.password,
-      }),
+      body: json.encode(payload),
     );
     final data = json.decode(response.body);
     return data['success'] == true;

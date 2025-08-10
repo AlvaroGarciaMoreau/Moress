@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/encryption_service.dart';
 import 'package:local_auth/local_auth.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -135,14 +134,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() { _isLoading = true; });
     final prefs = await SharedPreferences.getInstance();
-    final encrypted = prefs.getString('master_password');
-    bool isValid = false;
-    if (encrypted != null) {
-      final decrypted = EncryptionService.decrypt(encrypted);
-      isValid = decrypted == _passwordController.text;
-    }
+    final stored = prefs.getString('master_password');
+    final isValid = stored != null && stored == _passwordController.text;
     setState(() { _isLoading = false; });
     if (!mounted) return;
+
     if (isValid) {
       Navigator.of(context).pushReplacementNamed('/home');
     } else {

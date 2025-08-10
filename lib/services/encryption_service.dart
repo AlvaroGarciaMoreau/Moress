@@ -1,29 +1,37 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EncryptionService {
-  static const String _masterKey = "Moress2024SecureKey"; // En producción, esto debería estar en variables de entorno
-  
-  static String _generateKey() {
-    final key = utf8.encode(_masterKey);
-    final hash = sha256.convert(key);
-    return hash.toString().substring(0, 32);
+  static const String _prefsKey = 'master_password';
+  static String? _cachedKey;
+
+  // Deriva una clave de 32 bytes (como string) del master password almacenado
+  static Future<String> _generateKey() async {
+    if (_cachedKey != null) return _cachedKey!;
+    final prefs = await SharedPreferences.getInstance();
+    final master = prefs.getString(_prefsKey) ?? '';
+    final hash = sha256.convert(utf8.encode(master));
+    _cachedKey = hash.toString().substring(0, 32);
+    return _cachedKey!;
   }
 
-  static String encrypt(String text) {
+  static Future<void> invalidateCache() async {
+    _cachedKey = null;
+  }
+
+  static Future<String> encrypt(String text) async {
     if (text.isEmpty) return text;
-    
-    final key = _generateKey();
+    final key = await _generateKey();
     final bytes = utf8.encode(text);
     final encrypted = _xorEncrypt(bytes, key);
     return base64.encode(encrypted);
   }
 
-  static String decrypt(String encryptedText) {
+  static Future<String> decrypt(String encryptedText) async {
     if (encryptedText.isEmpty) return encryptedText;
-    
     try {
-      final key = _generateKey();
+      final key = await _generateKey();
       final bytes = base64.decode(encryptedText);
       final decrypted = _xorEncrypt(bytes, key);
       return utf8.decode(decrypted);

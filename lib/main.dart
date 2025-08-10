@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'services/theme_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/create_password_screen.dart';
@@ -13,11 +14,18 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  runApp(const MyApp());
+  
+  // Verificar si ya existe una contraseña maestra
+  final prefs = await SharedPreferences.getInstance();
+  final hasMasterPassword = prefs.containsKey('master_password');
+  
+  runApp(MyApp(initialRoute: hasMasterPassword ? '/login' : '/create-password'));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String initialRoute;
+  
+  const MyApp({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -25,8 +33,7 @@ class MyApp extends StatelessWidget {
       create: (context) => ThemeService(),
       child: Consumer<ThemeService>(
         builder: (context, themeService, child) {
-          return _AppLifecycleHandler(
-            child: MaterialApp(
+          return MaterialApp(
               title: 'Moress',
               debugShowCheckedModeBanner: false,
               themeMode: themeService.themeMode,
@@ -88,57 +95,17 @@ class MyApp extends StatelessWidget {
                   foregroundColor: Colors.white,
                 ),
               ),
-              home: const LoginScreen(),
+              initialRoute: initialRoute,
               routes: {
-                '/home': (_) => HomeScreenWrapper(),
+                '/home': (_) => const HomeScreen(),
                 '/login': (_) => const LoginScreen(),
                 '/create-password': (_) => const CreatePasswordScreen(),
               },
-            ),
-          );
+            );
         },
       ),
     );
   }
 }
 
-class _AppLifecycleHandler extends StatefulWidget {
-  final Widget child;
-  const _AppLifecycleHandler({required this.child});
 
-  @override
-  State<_AppLifecycleHandler> createState() => _AppLifecycleHandlerState();
-}
-
-class _AppLifecycleHandlerState extends State<_AppLifecycleHandler> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      SystemNavigator.pop();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
-}
-
-class HomeScreenWrapper extends StatelessWidget {
-  const HomeScreenWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const HomeScreen();
-  }
-}

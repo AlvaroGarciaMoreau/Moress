@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../models/service.dart';
 import '../services/remote_service.dart';
 import '../services/user_service.dart';
+import '../services/theme_service.dart';
 import '../widgets/service_card.dart';
 import 'add_service_screen.dart';
 import 'login_screen.dart';
-import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -242,7 +244,58 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }),
     );
   }
-  @override
+
+  void _showSettingsDialog() {
+    final themeService = context.read<ThemeService>();
+    ThemeMode selected = themeService.themeMode;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Configuración'),
+        content: StatefulBuilder(
+          builder: (context, setState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RadioListTile<ThemeMode>(
+                  title: const Text('Sistema'),
+                  value: ThemeMode.system,
+                  groupValue: selected,
+                  onChanged: (v) => setState(() => selected = v!),
+                ),
+                RadioListTile<ThemeMode>(
+                  title: const Text('Claro'),
+                  value: ThemeMode.light,
+                  groupValue: selected,
+                  onChanged: (v) => setState(() => selected = v!),
+                ),
+                RadioListTile<ThemeMode>(
+                  title: const Text('Oscuro'),
+                  value: ThemeMode.dark,
+                  groupValue: selected,
+                  onChanged: (v) => setState(() => selected = v!),
+                ),
+              ],
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await themeService.setThemeMode(selected);
+              if (mounted) Navigator.of(context).pop();
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Listener(
@@ -258,55 +311,52 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           backgroundColor: const Color(0xFF667eea),
           foregroundColor: Colors.white,
           actions: [
-              IconButton(
-                icon: const Icon(Icons.vpn_key),
-                tooltip: 'Cambiar contraseña maestra',
-                onPressed: () {
+            IconButton(
+              icon: const Icon(Icons.settings),
+              tooltip: 'Configuración',
+              onPressed: _showSettingsDialog,
+            ),
+            IconButton(
+              icon: const Icon(Icons.vpn_key),
+              tooltip: 'Cambiar contraseña maestra',
+              onPressed: () {
+                _onUserInteraction();
+                _showChangePasswordDialog();
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () {
+                _onUserInteraction();
+                _logout();
+              },
+              tooltip: 'Cerrar sesión',
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // Buscador
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) {
                   _onUserInteraction();
-                  _showChangePasswordDialog();
+                  _searchServices(value);
                 },
-              ),
-              IconButton(
-                icon: const Icon(Icons.settings),
-                tooltip: 'Configuración',
-                onPressed: () {
-                  _onUserInteraction();
-                 
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: () {
-                  _onUserInteraction();
-                  _logout();
-                },
-                tooltip: 'Cerrar sesión',
-              ),
-            ],
-          ),
-          body: Column(
-            children: [
-              // Buscador
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) {
-                    _onUserInteraction();
-                    _searchServices(value);
-                  },
-                  onTap: _onUserInteraction,
-                  decoration: InputDecoration(
-                    hintText: 'Buscar servicios...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
+                onTap: _onUserInteraction,
+                decoration: InputDecoration(
+                  hintText: 'Buscar servicios...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  filled: true,
+                  fillColor: Colors.grey[100],
                 ),
               ),
+            ),
               
               // Lista de servicios
               Expanded(

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/encryption_service.dart';
 import 'login_screen.dart';
 
 class CreatePasswordScreen extends StatefulWidget {
@@ -28,8 +27,10 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _isLoading = true; });
     final prefs = await SharedPreferences.getInstance();
-    final encrypted = EncryptionService.encrypt(_passwordController.text);
-    await prefs.setString('master_password', encrypted);
+    // Guardamos la contraseña maestra en claro en SharedPreferences
+    // (se usa solo para derivar la clave de cifrado). Opcionalmente
+    // se puede añadir un hash para validación en el futuro.
+    await prefs.setString('master_password', _passwordController.text);
     setState(() { _isLoading = false; });
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
