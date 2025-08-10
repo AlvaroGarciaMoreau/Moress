@@ -286,8 +286,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           ElevatedButton(
             onPressed: () async {
+              final localContext = context;
               await themeService.setThemeMode(selected);
-              if (mounted) Navigator.of(context).pop();
+              if (localContext.mounted) Navigator.of(localContext).pop();
             },
             child: const Text('Guardar'),
           ),
