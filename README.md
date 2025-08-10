@@ -1,4 +1,10 @@
-# Moress- 🔐 **Autenticación segura**: Contraseña maestra para acceder a la aplicación
+# Moress - Gestor de Contraseñas Seguro
+
+Moress es una aplicación móvil desarrollada en Flutter para gestionar de forma segura las contraseñas de diferentes servicios y aplicaciones.
+
+## Características
+
+- 🔐 **Autenticación segura**: Contraseña maestra para acceder a la aplicación
 - 👆 **Autenticación biométrica**: Soporte para huella dactilar y Face ID
 - 🔍 **Búsqueda rápida**: Busca servicios por nombre de servicio y nombre de usuario
 - 🔒 **Encriptación avanzada**: Todas las contraseñas se almacenan encriptadas con algoritmos seguros
@@ -10,13 +16,9 @@
 - 🛡️ **Protección de ciclo de vida**: Logout automático al minimizar o cambiar de app
 - 🔄 **Pull-to-refresh**: Actualiza la lista de servicios deslizando hacia abajo
 - 🎨 **Diseño responsive**: Interfaz adaptada para diferentes tamaños de pantalla
-- 🔧 **Detección de interacciones**: Sistema inteligente que reinicia timers con cualquier actividad de Contraseñas
-
-Moress es una aplicación móvil desarrollada en Flutter para gestionar de forma segura las contraseñas de diferentes servicios y aplicaciones.
-
-## Características
-
-- 🔐 **Autenticación segura**: Contraseña maestra para acceder a la aplicación
+- 🔧 **Detección de interacciones**: Sistema inteligente que reinicia timers con cualquier actividad
+- 💾 **Backup y Restore local**: Crea y restaura respaldos de forma segura en tu dispositivo
+- 🔐 **Backup encriptado**: Los respaldos están protegidos con tu contraseña maestra
 - � **Autenticación biométrica**: Soporte para huella dactilar y Face ID
 - �🔍 **Búsqueda rápida**: Busca servicios por nombre de servicio y nombre de usuario
 - 🔒 **Encriptación avanzada**: Todas las contraseñas se almacenan encriptadas con algoritmos seguros
@@ -61,6 +63,28 @@ Moress es una aplicación móvil desarrollada en Flutter para gestionar de forma
 3. **Editar servicios**: Mantén presionado un servicio para editarlo
 4. **Eliminar servicios**: Desliza o usa el menú de opciones
 
+### Backup y Restore (Nuevo)
+1. **Crear respaldo**:
+   - Ve a Configuración → "Crear respaldo"
+   - Introduce tu contraseña maestra para autorizar
+   - El archivo se guarda automáticamente en Documentos/Moress_Backups/
+   - Formato: `moress_backup_YYYY-MM-DD_HH-mm-ss.mrbak`
+   - Archivo completamente encriptado con tu contraseña maestra
+
+2. **Restaurar respaldo**:
+   - Ve a Configuración → "Restaurar respaldo"
+   - Selecciona el archivo `.mrbak` desde tu dispositivo
+   - Introduce tu contraseña maestra para desencriptar
+   - Los servicios se importan automáticamente
+   - La lista se actualiza inmediatamente con los datos restaurados
+
+3. **Seguridad del backup**:
+   - ✅ **Encriptación completa**: AES con tu contraseña maestra
+   - ✅ **Almacenamiento local**: Solo en tu dispositivo
+   - ✅ **Sin conexión**: Funciona completamente offline
+   - ✅ **Verificación**: Requiere contraseña para crear y restaurar
+   - ✅ **Formato propietario**: Archivos `.mrbak` seguros
+
 ### Búsqueda y filtrado
 - Usa el campo de búsqueda en la parte superior
 - Busca por nombre de servicio o usuario
@@ -103,14 +127,26 @@ lib/
 │   └── service.dart            # Modelo de datos para servicios
 ├── screens/
 │   ├── login_screen.dart       # Pantalla de login con biometría
-│   ├── home_screen.dart        # Pantalla principal con auto-bloqueo
+│   ├── home_screen.dart        # Pantalla principal con auto-bloqueo y backup
 │   ├── add_service_screen.dart # Pantalla para añadir/editar servicios
-│   └── create_password_screen.dart # Pantalla de creación de contraseña
+│   ├── create_password_screen.dart # Pantalla de creación de contraseña
+│   └── two_factor_setup_screen.dart # Configuración de autenticación 2FA
 ├── services/
 │   ├── database_service.dart   # Servicio de base de datos SQLite
-│   └── encryption_service.dart # Servicio de encriptación segura
+│   ├── encryption_service.dart # Servicio de encriptación segura
+│   ├── backup_service.dart     # Servicio de backup y restore local
+│   ├── password_analyzer.dart  # Análisis de fortaleza de contraseñas
+│   ├── two_factor_service.dart # Servicio de autenticación 2FA
+│   ├── reminder_service.dart   # Recordatorios de cambio de contraseña
+│   ├── settings_service.dart   # Configuración de la aplicación
+│   ├── theme_service.dart      # Gestión de temas
+│   └── responsive_service.dart # Diseño responsivo
 └── widgets/
-    └── service_card.dart       # Widget para mostrar servicios
+    ├── service_card.dart       # Widget para mostrar servicios
+    └── dialogs/                # Diálogos de la aplicación
+        ├── settings_dialog.dart     # Diálogo de configuración
+        ├── password_input_dialog.dart # Entrada de contraseña
+        └── change_password_dialog.dart # Cambio de contraseña maestra
 ```
 
 ## Dependencias Principales
@@ -120,6 +156,12 @@ lib/
 - `path: ^1.8.3` - Manejo de rutas de archivos
 - `shared_preferences: ^2.2.2` - Almacenamiento de preferencias
 - `local_auth: ^2.1.7` - Autenticación biométrica
+- `file_picker: ^8.0.7` - Selección de archivos para backup/restore
+- `path_provider: ^2.1.2` - Acceso a directorios del sistema
+- `provider: ^6.1.1` - Gestión de estado y temas
+- `intl: ^0.19.0` - Internacionalización y formato de fechas
+- `otp: ^3.1.4` - Generación de códigos TOTP para 2FA
+- `qr_flutter: ^4.1.0` - Generación de códigos QR para 2FA
 
 ## Requisitos del Sistema
 
@@ -223,19 +265,35 @@ Este error se solucionó completamente en la versión actual usando `Listener` e
 - ✅ Manejo robusto de errores
 - ✅ **Sistema de timers inteligentes**
 - ✅ **Detección avanzada de gestos e interacciones**
+- ✅ **Backup y restore local completamente funcional**
+- ✅ **Encriptación de backups con contraseña maestra**
+- ✅ **Diálogo de configuración avanzado**
+- ✅ **Selección de archivos para restore**
+- ✅ **Actualización automática de UI después de restore**
+- ✅ **Análisis de fortaleza de contraseñas**
+- ✅ **Base para autenticación 2FA**
+- ✅ **Sistema de recordatorios de contraseñas**
+- ✅ **Gestión de temas y configuración**
+- ✅ **Diseño responsivo y adaptativo**
 
 ## Próximas Mejoras
 
-- 🔄 Respaldo y restauración de datos
-- 📊 Análisis de seguridad de contraseñas
-- 🔔 Recordatorios de cambio de contraseña
-- 🌙 Modo oscuro
-- 📱 Soporte para tablets
-- 🔐 Autenticación de dos factores
+- � Recordatorios activos de cambio de contraseña
+- 🌙 Modo oscuro completo
+- 📱 Optimización avanzada para tablets
+- 🔐 Autenticación de dos factores (2FA) completa
 - ⚙️ Configuración personalizable de timeouts
 - 📈 Estadísticas de uso y seguridad
-- 🎨 Temas personalizables
+- 🎨 Temas personalizables múltiples
 - 🔍 Búsqueda avanzada con filtros
+- 📊 Dashboard de seguridad
+- 🔄 Backup automático programado
+- ☁️ Sincronización opcional entre dispositivos
+- 📱 Versión para smartwatch
+- 🗂️ Categorización de servicios
+- 🔗 Detección automática de servicios duplicados
+- 📧 Exportación a otros formatos (CSV, JSON)
+- 🛡️ Auditoría de seguridad integrada
 
 ## Seguridad de Nivel Bancario
 

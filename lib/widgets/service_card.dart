@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/service.dart';
-import '../services/database_service.dart';
+import '../services/remote_service.dart';
+import '../services/user_service.dart';
 
 class ServiceCard extends StatefulWidget {
   final Service service;
@@ -66,22 +67,24 @@ class _ServiceCardState extends State<ServiceCard> {
   Color _getCardColor() {
     // Intenta parsear la fecha
     try {
-      final partes = widget.service.createdAt.split(' de ');
-      if (partes.length >= 3) {
-        final dia = int.parse(partes[0]);
-        final mesStr = partes[1].trim();
-        final anio = int.parse(partes[2].split(',')[0].trim());
-        final meses = [
-          'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-          'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-        ];
-        final mes = meses.indexOf(mesStr) + 1;
-        final fecha = DateTime(anio, mes, dia);
-        final ahora = DateTime.now();
-        final diferencia = ahora.difference(fecha);
-        if (diferencia.inDays > 180) {
-          // Más de 6 meses
-          return const Color(0xFFFFE5E5); // Rojo pastel suave
+      if (widget.service.createdAt != null) {
+        final partes = widget.service.createdAt!.split(' de ');
+        if (partes.length >= 3) {
+          final dia = int.parse(partes[0]);
+          final mesStr = partes[1].trim();
+          final anio = int.parse(partes[2].split(',')[0].trim());
+          final meses = [
+            'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+          ];
+          final mes = meses.indexOf(mesStr) + 1;
+          final fecha = DateTime(anio, mes, dia);
+          final ahora = DateTime.now();
+          final diferencia = ahora.difference(fecha);
+          if (diferencia.inDays > 180) {
+            // Más de 6 meses
+            return const Color(0xFFFFE5E5); // Rojo pastel suave
+          }
         }
       }
     } catch (_) {}
@@ -113,7 +116,7 @@ class _ServiceCardState extends State<ServiceCard> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF667eea).withOpacity(0.1),
+                      color: const Color(0xFF667eea).withAlpha((0.1 * 255).toInt()),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
@@ -129,12 +132,20 @@ class _ServiceCardState extends State<ServiceCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          widget.service.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.service.name,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            // Indicador de recordatorio
+                            // Indicador de recordatorio eliminado (modo remoto)
+                          ],
                         ),
                         Text(
                           widget.service.user,
@@ -275,14 +286,12 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
   late TextEditingController _passwordController;
   bool _obscurePassword = true;
   bool _isLoading = false;
-  String? _originalPassword;
 
   @override
   void initState() {
-    super.initState();
-    _userController = TextEditingController(text: widget.service.user);
-    _passwordController = TextEditingController(text: widget.service.password);
-    _originalPassword = widget.service.password;
+  super.initState();
+  _userController = TextEditingController(text: widget.service.user);
+  _passwordController = TextEditingController(text: widget.service.password);
   }
 
   @override
@@ -296,17 +305,33 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _isLoading = true; });
     final newPassword = _passwordController.text;
-    final updateDate = newPassword != _originalPassword;
     final updatedService = Service(
       id: widget.service.id,
       name: widget.service.name,
       user: _userController.text.trim(),
       password: newPassword,
-      createdAt: updateDate ? null : widget.service.createdAt,
+      createdAt: widget.service.createdAt,
+      updatedAt: DateTime.now().toIso8601String(),
     );
-    await DatabaseService.updateService(updatedService);
-    setState(() { _isLoading = false; });
-    if (mounted) Navigator.of(context).pop(updatedService);
+    try {
+      final uuid = await UserService.getOrCreateUuid();
+      final success = await RemoteService.guardarServicio(updatedService, uuid);
+      setState(() { _isLoading = false; });
+      if (mounted && success) {
+        Navigator.of(context).pop(updatedService);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al guardar cambios'), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      setState(() { _isLoading = false; });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override

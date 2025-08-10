@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/service.dart';
-import '../services/database_service.dart';
+import '../services/remote_service.dart';
+import '../services/user_service.dart';
 import '../widgets/service_card.dart';
 import 'add_service_screen.dart';
 import 'login_screen.dart';
@@ -19,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Service> _filteredServices = [];
   bool _isLoading = true;
   final _searchController = TextEditingController();
-  int _serviceCount = 0;
+
   Timer? _inactivityTimer;
   Timer? _warningTimer;
   bool _isAppInBackground = false;
@@ -122,11 +123,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _loadServicesAndCount() async {
     setState(() { _isLoading = true; });
     try {
-      final services = await DatabaseService.getServices();
+      final uuid = await UserService.getOrCreateUuid();
+      final services = await RemoteService.listarServicios(uuid);
       setState(() {
         _services = services;
         _filteredServices = services;
-        _serviceCount = services.length;
+      
         _isLoading = false;
       });
     } catch (e) {
@@ -188,15 +190,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (confirmed == true && service.id != null) {
       try {
-        await DatabaseService.deleteService(service.id!);
-        _loadServicesAndCount();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Servicio eliminado correctamente'),
-              backgroundColor: Colors.green,
-            ),
-          );
+        final uuid = await UserService.getOrCreateUuid();
+        final success = await RemoteService.borrarServicio(service.id!, uuid);
+        if (success) {
+          _loadServicesAndCount();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Servicio eliminado correctamente'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          throw Exception('No se pudo eliminar el servicio');
         }
       } catch (e) {
         if (mounted) {
@@ -235,23 +242,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }),
     );
   }
-
-  void _showSettingsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Configuración'),
-        content: Text('Contraseñas guardadas: $_serviceCount'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
+  @override
   @override
   Widget build(BuildContext context) {
     return Listener(
@@ -280,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 tooltip: 'Configuración',
                 onPressed: () {
                   _onUserInteraction();
-                  _showSettingsDialog();
+                 
                 },
               ),
               IconButton(
@@ -397,7 +388,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       );
   }
-} 
+}
+
 
 class _ChangePasswordDialog extends StatefulWidget {
   final VoidCallback onChanged;
@@ -425,19 +417,11 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
   }
 
   Future<void> _changePassword() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() { _isLoading = true; });
-    final isValid = await DatabaseService.verifyMasterPassword(_currentController.text);
-    if (!isValid) {
-      setState(() { _isLoading = false; });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contraseña actual incorrecta'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-    await DatabaseService.saveMasterPassword(_newController.text);
+  
     setState(() { _isLoading = false; });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Funcionalidad no disponible en modo remoto'), backgroundColor: Colors.orange),
+    );
     widget.onChanged();
   }
 

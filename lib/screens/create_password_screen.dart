@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/database_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/encryption_service.dart';
 import 'login_screen.dart';
 
 class CreatePasswordScreen extends StatefulWidget {
@@ -26,7 +27,9 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
   Future<void> _savePassword() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _isLoading = true; });
-    await DatabaseService.saveMasterPassword(_passwordController.text);
+    final prefs = await SharedPreferences.getInstance();
+    final encrypted = EncryptionService.encrypt(_passwordController.text);
+    await prefs.setString('master_password', encrypted);
     setState(() { _isLoading = false; });
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -72,7 +75,7 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withAlpha((0.05 * 255).round()),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -87,7 +90,7 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                           width: 100,
                           height: 100,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF667eea).withOpacity(0.1),
+                            color: const Color(0xFF667eea).withAlpha((0.1 * 255).round()),
                             borderRadius: BorderRadius.circular(50),
                           ),
                           child: const Icon(

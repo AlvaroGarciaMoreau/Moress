@@ -1,5 +1,5 @@
 name: mores
-description: "A new Flutter project."
+description: "Passwords for live."
 publish_to: 'none'
 version: 0.1.0
 
@@ -14,6 +14,19 @@ dependencies:
   path: ^1.8.3
   shared_preferences: ^2.2.2
   local_auth: ^2.1.7
+  provider: ^6.1.1
+  intl: ^0.19.0
+  file_picker: ^8.0.7
+  path_provider: ^2.1.2
+  permission_handler: ^11.3.0
+  otp: ^3.1.4
+  qr_flutter: ^4.1.0
+  # Para conexiones SFTP seguras - Temporalmente deshabilitado por problemas de compilación
+  # ssh2: ^2.2.1
+  # Para validación de URLs y conexiones
+  connectivity_plus: ^6.0.3
+  http: ^1.2.1
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:

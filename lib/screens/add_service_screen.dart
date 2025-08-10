@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/service.dart';
-import '../services/database_service.dart';
+import '../services/remote_service.dart';
+import '../services/user_service.dart';
 import 'dart:math';
 
 class AddServiceScreen extends StatefulWidget {
@@ -39,17 +40,25 @@ class _AddServiceScreenState extends State<AddServiceScreen> {
         user: _userController.text.trim(),
         password: _passwordController.text,
       );
-
-      await DatabaseService.insertService(service);
-
+      final uuid = await UserService.getOrCreateUuid();
+      final success = await RemoteService.guardarServicio(service, uuid);
       if (mounted) {
-        Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Servicio guardado correctamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (success) {
+          Navigator.of(context).pop(true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Servicio guardado correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error al guardar servicio'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
