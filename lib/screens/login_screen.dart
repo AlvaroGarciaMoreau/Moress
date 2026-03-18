@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:local_auth/local_auth.dart';
+import '../services/remote_service.dart';
+import '../services/encryption_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -134,13 +137,39 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+    
     setState(() { _isLoading = true; });
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    
     final prefs = await SharedPreferences.getInstance();
     final storedEmail = prefs.getString('user_email');
     final storedPassword = prefs.getString('master_password');
-    final isValid = storedEmail != null && storedPassword != null &&
-        storedEmail == _emailController.text.trim() &&
-        storedPassword == _passwordController.text;
+    
+    // 1. Intento de login local (offline)
+    bool isValid = storedEmail != null && storedPassword != null &&
+        storedEmail == email && storedPassword == password;
+    
+    // 2. Si falla el local o no existe, intento remoto
+    if (!isValid) {
+      try {
+        // Al intentar listar servicios, si el email existe el servidor responderá 200
+        // No hay un endpoint de login específico, así que usamos la lista de servicios como validación
+        await RemoteService.listarServicios(email);
+        
+        // Si llegamos aquí, el email existe en el servidor. 
+        // IMPORTANTE: En este sistema la contraseña es local/maestra para encriptación.
+        // Si el usuario ya tiene cuenta, guardamos sus credenciales localmente.
+        await prefs.setString('user_email', email);
+        await prefs.setString('master_password', password);
+        await EncryptionService.invalidateCache();
+        isValid = true;
+      } catch (e) {
+        isValid = false;
+      }
+    }
+
     setState(() { _isLoading = false; });
     if (!mounted) return;
 
@@ -150,8 +179,8 @@ class _LoginScreenState extends State<LoginScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Error'),
-          content: const Text('Email o contraseña incorrectos'),
+          title: const Text('Error de acceso'),
+          content: const Text('No se ha podido validar tu cuenta. Verifica tu email y contraseña maestra. Si eres nuevo, por favor crea una cuenta primero.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -374,9 +403,58 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                         ),
                       ),
+                      // Botón de registro
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pushNamed('/create-password');
+                        },
+                        child: const Text(
+                          '¿No tienes cuenta? Crea una aquí',
+                          style: TextStyle(
+                            color: Colors.white,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Mensaje sobre plataforma Android
+                      const Text(
+                        'Esta aplicación está pensada y diseñada especialmente para dispositivos móviles Android',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       
-                     ],
+                      // Enlace a GitHub
+                      InkWell(
+                        onTap: () async {
+                          final url = Uri.parse('https://github.com/AlvaroGarciaMoreau/Moress');
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url);
+                          }
+                        },
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.code, color: Colors.white, size: 16),
+                            SizedBox(width: 8),
+                            Text(
+                              'Ver código en GitHub',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ),
                 ),
               ),

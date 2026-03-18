@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'services/theme_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/create_password_screen.dart';
@@ -15,11 +14,7 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
   
-  // Verificar si ya existe una contraseña maestra
-  final prefs = await SharedPreferences.getInstance();
-  final hasMasterPassword = prefs.containsKey('master_password');
-  
-  runApp(MyApp(initialRoute: hasMasterPassword ? '/login' : '/create-password'));
+  runApp(const MyApp(initialRoute: '/login'));
 }
 
 class MyApp extends StatelessWidget {

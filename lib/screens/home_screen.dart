@@ -175,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminar servicio'),
-        content: Text('1Est1s seguro de que quieres eliminar "${service.name}"?'),
+        content: Text('¿Estás seguro de que quieres eliminar "${service.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -261,19 +261,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 RadioListTile<ThemeMode>(
                   title: const Text('Sistema'),
                   value: ThemeMode.system,
+                  // ignore: deprecated_member_use
                   groupValue: selected,
+                  // ignore: deprecated_member_use
                   onChanged: (v) => setState(() => selected = v!),
                 ),
                 RadioListTile<ThemeMode>(
                   title: const Text('Claro'),
                   value: ThemeMode.light,
+                  // ignore: deprecated_member_use
                   groupValue: selected,
+                  // ignore: deprecated_member_use
                   onChanged: (v) => setState(() => selected = v!),
                 ),
                 RadioListTile<ThemeMode>(
                   title: const Text('Oscuro'),
                   value: ThemeMode.dark,
+                  // ignore: deprecated_member_use
                   groupValue: selected,
+                  // ignore: deprecated_member_use
                   onChanged: (v) => setState(() => selected = v!),
                 ),
               ],
@@ -471,9 +477,11 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
   Future<void> _changePassword() async {
   
     setState(() { _isLoading = false; });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Funcionalidad no disponible en modo remoto'), backgroundColor: Colors.orange),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Funcionalidad no disponible en modo remoto'), backgroundColor: Colors.orange),
+      );
+    }
     widget.onChanged();
   }
 
