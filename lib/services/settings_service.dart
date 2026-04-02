@@ -7,8 +7,8 @@ class SettingsService {
   static const String _biometricEnabledKey = 'biometric_enabled';
   
   // Valores por defecto
-  static const int defaultWarningTimeout = 25; // segundos
-  static const int defaultLogoutTimeout = 30; // segundos
+  static const int defaultWarningTimeout = 55; // segundos
+  static const int defaultLogoutTimeout = 60; // segundos
   static const bool defaultAutoLogoutEnabled = true;
   static const bool defaultBiometricEnabled = true;
   

@@ -12,8 +12,8 @@ Moress es una aplicación móvil desarrollada en Flutter para gestionar de forma
 - 📋 **Copiar al portapapeles**: Copia contraseñas con un toque
 - 🗑️ **Gestión completa**: Añadir, eliminar, editar y gestionar servicios
 - 🔄 **Generador de contraseñas**: Genera contraseñas seguras automáticamente
-- ⏱️ **Auto-bloqueo por inactividad**: Cierre automático de la app por seguridad (30s)
-- 🛡️ **Protección de ciclo de vida**: Logout automático al minimizar o cambiar de app
+- ⏱️ **Auto-bloqueo por inactividad**: Cierre automático de la app por seguridad (60s) (Deshabilitado en web para mayor comodidad)
+- 🛡️ **Protección de ciclo de vida**: Logout automático al minimizar o cambiar de app (Solo en móviles)
 - 🔄 **Pull-to-refresh**: Actualiza la lista de servicios deslizando hacia abajo
 - 🎨 **Diseño responsive**: Interfaz adaptada para diferentes tamaños de pantalla
 - 🔧 **Detección de interacciones**: Sistema inteligente que reinicia timers con cualquier actividad
@@ -47,8 +47,8 @@ Moress es una aplicación móvil desarrollada en Flutter para gestionar de forma
 ### Autenticación
 - **Contraseña maestra**: Introduce tu contraseña para acceder
 - **Biometría**: Usa huella dactilar o Face ID para acceso rápido y seguro
-- **Auto-bloqueo por inactividad**: La app se cierra automáticamente tras 30 segundos sin actividad
-- **Protección total**: Logout automático al minimizar, cambiar de app o perder el foco
+- **Auto-bloqueo por inactividad**: La app se cierra automáticamente tras 60 segundos sin actividad (Excepto en versión web)
+- **Protección total**: Logout automático al minimizar o cambiar de app (Solo en dispositivos móviles)
 - **Detección inteligente**: Cualquier toque, scroll o interacción reinicia el temporizador de seguridad
 
 ### Gestión de servicios
@@ -103,8 +103,8 @@ Moress es una aplicación móvil desarrollada en Flutter para gestionar de forma
 - **Contraseña maestra**: Protege el acceso a toda la aplicación
 - **Autenticación biométrica**: Huella dactilar y Face ID para acceso seguro y conveniente
 - **Auto-bloqueo inteligente**: 
-  - Advertencia a los 25 segundos de inactividad real
-  - Cierre automático a los 30 segundos sin interacción
+  - Advertencia a los 55 segundos de inactividad real
+  - Cierre automático a los 60 segundos sin interacción (Deshabilitado en versión web)
   - Detección avanzada de todas las interacciones del usuario
 - **Protección del ciclo de vida de la aplicación**:
   - 🔒 Logout automático al **minimizar la app**
@@ -189,11 +189,11 @@ colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF667eea)),
 ### Configurar temporizador de auto-bloqueo
 En `lib/screens/home_screen.dart`, modifica las duraciones:
 ```dart
-// Timer de advertencia (por defecto: 25 segundos)
-_warningTimer = Timer(const Duration(seconds: 25), () { ... });
+// Timer de advertencia (por defecto: 55 segundos)
+_warningTimer = Timer(const Duration(seconds: 55), () { ... });
 
-// Timer de cierre (por defecto: 30 segundos)  
-_inactivityTimer = Timer(const Duration(seconds: 30), () { ... });
+// Timer de cierre (por defecto: 60 segundos)  
+_inactivityTimer = Timer(const Duration(seconds: 60), () { ... });
 ```
 
 ### Configurar protección del ciclo de vida
@@ -224,7 +224,7 @@ Esto es **comportamiento normal de seguridad**. La app requiere reautenticación
 - Al minimizar y volver a abrir
 - Al cambiar de app y regresar
 - Al recibir llamadas o notificaciones
-- Después de 30 segundos de inactividad
+- Después de 60 segundos de inactividad
 
 ### Error "Incorrect GestureDetector arguments"
 Este error se solucionó completamente en la versión actual usando `Listener` en lugar de `GestureDetector`.

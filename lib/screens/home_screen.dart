@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -46,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (kIsWeb) return; // Deshabilitar logout automático en Web al perder foco
     super.didChangeAppLifecycleState(state);
     
     switch (state) {
@@ -92,12 +94,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _startInactivityTimer() {
+    if (kIsWeb) return; // Deshabilitar temporizador de inactividad en Web
     // Cancelar timers existentes
     _inactivityTimer?.cancel();
     _warningTimer?.cancel();
     
-    // Timer de advertencia (25 segundos)
-    _warningTimer = Timer(const Duration(seconds: 25), () {
+    // Timer de advertencia (55 segundos)
+    _warningTimer = Timer(const Duration(seconds: 55), () {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -109,8 +112,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     });
     
-    // Timer de cierre (30 segundos)
-    _inactivityTimer = Timer(const Duration(seconds: 30), () {
+    // Timer de cierre (60 segundos)
+    _inactivityTimer = Timer(const Duration(seconds: 60), () {
       if (mounted) {
         SystemNavigator.pop();
       }
